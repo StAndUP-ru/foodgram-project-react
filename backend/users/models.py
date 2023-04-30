@@ -23,11 +23,13 @@ class User(AbstractUser):
     )
     first_name = models.CharField(
         max_length=150,
+        null=False,
         blank=False,
         verbose_name='First_name'
     )
     last_name = models.CharField(
         max_length=150,
+        null=False,
         blank=False,
         verbose_name='Last_name'
     )

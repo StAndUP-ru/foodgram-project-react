@@ -4,23 +4,23 @@ from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, Tag)
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from users.models import Subscription, User
 
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
+from users.models import Subscription, User
 from .filters import RecipesFilters
 from .paginations import LimitPageNumberPagination
-from .permissions import IsAuthorOrAdmin
-from .serializers import (AddRecipeSerializer, CustomUserSerializer,
-                          IngredientSerializer, RecipeSerializer,
-                          SubscriptionSerializer, TagSerializer)
-
+from .permissions import IsAuthorOrAdmin, IsAuthorOrReadOnly
+from .serializers import (AddRecipeFavoriteSerializer, CreateRecipeSerializer,
+                          CustomUserSerializer, IngredientSerializer,
+                          RecipeSerializer, SubscriptionSerializer,
+                          TagSerializer)
 
 pdfmetrics.registerFont(TTFont('ArialUni', 'fonts/Arial Unicode MS.ttf'))
 
@@ -83,15 +83,16 @@ class UsersViewSet(UserViewSet):
 
 class RecipesViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
     pagination_class = LimitPageNumberPagination
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (IsAuthorOrReadOnly,)
     filter_backends = [DjangoFilterBackend]
     filterset_class = RecipesFilters
     search_fields = ('name',)
 
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+    def get_serializer_class(self):
+        if self.action in ('retrieve', 'list'):
+            return RecipeSerializer
+        return CreateRecipeSerializer
 
     @action(detail=True, methods=['POST', 'DELETE'], url_path='favorite')
     def recipe_in_favorite(self, request, pk):
@@ -122,7 +123,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
                                 recipe=recipe
                                 )
                 item.save()
-                serializer = AddRecipeSerializer(
+                serializer = AddRecipeFavoriteSerializer(
                     item,
                     context={'request': request}
                 )
@@ -156,7 +157,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
                                     recipe=recipe
                                     )
                 item.save()
-                serializer = AddRecipeSerializer(
+                serializer = AddRecipeFavoriteSerializer(
                     item,
                     context={'request': request}
                 )
@@ -177,16 +178,16 @@ class RecipesViewSet(viewsets.ModelViewSet):
             recipe_ingredients = RecipeIngredient.objects.filter(
                 recipe=recipe).values('ingredient__name',
                                       'ingredient__measurement_unit',
-                                      'quantity'
+                                      'amount'
                                       )
             for ingredient in recipe_ingredients:
                 key = (ingredient['ingredient__name']+' ('
                        + ingredient['ingredient__measurement_unit']+')'
                        )
                 if ingredient['ingredient__name'] in ingredient_dict:
-                    ingredient_dict[key] += ingredient['quantity']
+                    ingredient_dict[key] += ingredient['amount']
                 else:
-                    ingredient_dict[key] = ingredient['quantity']
+                    ingredient_dict[key] = ingredient['amount']
         buffer = io.BytesIO()
         pdf = canvas.Canvas(buffer)
         pdf.setFont('ArialUni', 20)

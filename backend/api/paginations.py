@@ -3,7 +3,7 @@ from rest_framework.pagination import (LimitOffsetPagination,
 
 
 class LimitPageNumberPagination(LimitOffsetPagination, PageNumberPagination):
-    default_limit = 10
+    default_limit = 6
     limit_query_param = 'limit'
     max_limit = 100
 
