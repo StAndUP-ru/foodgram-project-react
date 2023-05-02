@@ -24,13 +24,7 @@ class IngredientAdmin(admin.ModelAdmin):
 admin.site.register(Ingredient, IngredientAdmin)
 
 
-# class RecipeTagInline(admin.TabularInline):
-#     model = RecipeTag
-#     extra = 1
-
-
 class TagAdmin(admin.ModelAdmin):
-    # inlines = [RecipeTagInline]
     list_display = (
         'pk',
         'name',

@@ -11,16 +11,17 @@ from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, Tag)
+from recipes.models import (Ingredient, Recipe, RecipeIngredient, Tag,
+                            Favorite, ShoppingCart)
 from users.models import Subscription, User
 from .filters import RecipesFilters
 from .paginations import LimitPageNumberPagination
-from .permissions import IsAuthorOrAdmin, IsAuthorOrReadOnly
-from .serializers import (AddRecipeFavoriteSerializer, CreateRecipeSerializer,
+from .permissions import IsAuthorOrReadOnly
+from .serializers import (ShortRecipeSerializer, CreateRecipeSerializer,
                           CustomUserSerializer, IngredientSerializer,
                           RecipeSerializer, SubscriptionSerializer,
-                          TagSerializer)
+                          TagSerializer, FavoriteSerializer,
+                          ShoppingCartSerializer)
 
 pdfmetrics.registerFont(TTFont('ArialUni', 'fonts/Arial Unicode MS.ttf'))
 
@@ -94,85 +95,74 @@ class RecipesViewSet(viewsets.ModelViewSet):
             return RecipeSerializer
         return CreateRecipeSerializer
 
-    @action(detail=True, methods=['POST', 'DELETE'], url_path='favorite')
-    def recipe_in_favorite(self, request, pk):
+    @staticmethod
+    def post_method(request, pk, serializers):
+        data = {'user': request.user.id, 'recipe': pk}
+        serializer = serializers(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @staticmethod
+    def delete_method(request, pk, model):
         user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
-        try:
-            item = Favorite.objects.get(user=user,
-                                        recipe=recipe
-                                        )
-            if request.method == 'DELETE':
-                item.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            if request.method == 'POST':
-                return Response({'error': 'Этот рецепт уже в избранном'},
-                                status=status.HTTP_400_BAD_REQUEST
-                                )
-        except Favorite.DoesNotExist:
-            if request.method == 'DELETE':
-                return Response({'error': 'Этого рецепта нет в избранном'},
-                                status=status.HTTP_400_BAD_REQUEST
-                                )
-            if request.method == 'POST':
-                if user.id == recipe.author_id:
-                    return Response({'error': 'Нельзя добавить свой рецепт'},
-                                    status=status.HTTP_400_BAD_REQUEST
-                                    )
-                item = Favorite(user=user,
-                                recipe=recipe
-                                )
-                item.save()
-                serializer = AddRecipeFavoriteSerializer(
-                    item,
-                    context={'request': request}
-                )
-                return Response(serializer.data,
-                                status=status.HTTP_201_CREATED)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        model_obj = get_object_or_404(model, user=user, recipe=recipe)
+        model_obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['POST', 'DELETE'],
-            url_path='shopping_cart', permission_classes=(IsAuthorOrAdmin,))
-    def recipe_in_shopping_cart(self, request, pk):
+            url_path='favorite',
+            permission_classes=(permissions.IsAuthenticated,))
+    def recipe_favorite(self, request, pk=None):
+        if request.method == 'POST':
+            return self.post_method(request=request, pk=pk,
+                                    serializers=FavoriteSerializer)
+        return self.delete_method(request=request, pk=pk, model=Favorite)
+
+    @action(detail=False, methods=['GET'], url_path='favorites',
+            permission_classes=(permissions.IsAuthenticated,))
+    def list_recipes_favorite(self, request, pk=None):
         user = request.user
-        recipe = get_object_or_404(Recipe, id=pk)
-        try:
-            item = ShoppingCart.objects.get(user=user,
-                                            recipe=recipe
-                                            )
-            if request.method == 'DELETE':
-                item.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            if request.method == 'POST':
-                return Response({'error': 'Этот рецепт уже в корзине'},
-                                status=status.HTTP_400_BAD_REQUEST
-                                )
-        except ShoppingCart.DoesNotExist:
-            if request.method == 'DELETE':
-                return Response({'error': 'Этого рецепта нет в корзине'},
-                                status=status.HTTP_400_BAD_REQUEST
-                                )
-            if request.method == 'POST':
-                item = ShoppingCart(user=user,
-                                    recipe=recipe
-                                    )
-                item.save()
-                serializer = AddRecipeFavoriteSerializer(
-                    item,
-                    context={'request': request}
-                )
-                return Response(serializer.data,
-                                status=status.HTTP_201_CREATED)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        queryset = Favorite.objects.filter(user=user)
+        pages = self.paginate_queryset(queryset)
+        serializer = FavoriteSerializer(
+            pages,
+            many=True,
+            context={'request': request}
+        )
+        return self.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=['POST', 'DELETE'],
+            url_path='shopping_cart',
+            permission_classes=(permissions.IsAuthenticated,))
+    def recipe_shopping_cart(self, request, pk):
+        if request.method == 'POST':
+            return self.post_method(request=request, pk=pk,
+                                    serializers=ShoppingCartSerializer)
+        return self.delete_method(request=request, pk=pk, model=ShoppingCart)
+
+    @action(detail=False, methods=['GET'], url_path='shopping_cart',
+            permission_classes=(permissions.IsAuthenticated,))
+    def list_shopping_cart(self, request, pk=None):
+        user = request.user
+        queryset = ShoppingCart.objects.filter(user=user)
+        pages = self.paginate_queryset(queryset)
+        serializer = ShoppingCartSerializer(
+            pages,
+            many=True,
+            context={'request': request}
+        )
+        return self.get_paginated_response(serializer.data)
 
     @action(detail=False, methods=['GET'],
             permission_classes=(permissions.IsAuthenticated,))
     def download_shopping_cart(self, request):
         user = request.user
+        if not ShoppingCart.objects.filter(user=user).exists():
+            return HttpResponse("Ваш список покупок пуст")
         shopping_cart = ShoppingCart.objects.filter(user=user)
-        if not shopping_cart:
-            return HttpResponse("Ваша корзина пуста")
-        ingredient_dict = {}
+        ingredient_out: dict = {}
         for item in shopping_cart:
             recipe = item.recipe
             recipe_ingredients = RecipeIngredient.objects.filter(
@@ -184,17 +174,17 @@ class RecipesViewSet(viewsets.ModelViewSet):
                 key = (ingredient['ingredient__name']+' ('
                        + ingredient['ingredient__measurement_unit']+')'
                        )
-                if ingredient['ingredient__name'] in ingredient_dict:
-                    ingredient_dict[key] += ingredient['amount']
+                if ingredient['ingredient__name'] in ingredient_out:
+                    ingredient_out[key] += ingredient['amount']
                 else:
-                    ingredient_dict[key] = ingredient['amount']
+                    ingredient_out[key] = ingredient['amount']
         buffer = io.BytesIO()
         pdf = canvas.Canvas(buffer)
         pdf.setFont('ArialUni', 20)
         pdf.drawString(200, 750, 'Список покупок')
         pdf.setFont('ArialUni', 16)
         y = 710
-        for i, (keys, value) in enumerate(ingredient_dict.items()):
+        for i, (keys, value) in enumerate(ingredient_out.items()):
             item_string = f'{i+1}. {keys} - {value}'
             pdf.drawString(100, y, item_string)
             y -= 20

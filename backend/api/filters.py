@@ -1,4 +1,5 @@
 from django_filters.rest_framework import FilterSet, filters
+
 from recipes.models import Recipe
 
 
@@ -19,7 +20,6 @@ class RecipesFilters(FilterSet):
         return queryset
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
-        print(value)
         if value:
             return queryset.filter(shoppingcarts__user=self.request.user)
         return queryset
