@@ -9,9 +9,7 @@ services:
       - ./.env
 
   backend:
-    build:
-      context: ../
-      dockerfile: backend/Dockerfile
+    image: standup188/foodgram_backend:latest
     expose:
       - 8000
     restart: always
@@ -38,9 +36,7 @@ services:
       - backend
 
   frontend:
-    build:
-      context: ../
-      dockerfile: frontend/Dockerfile
+    image: standup188/foodgram_frontend
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:
