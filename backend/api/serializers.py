@@ -1,5 +1,3 @@
-from django.db.models import Prefetch
-from django.contrib.auth import authenticate
 from djoser.serializers import UserSerializer
 from rest_framework import serializers
 
@@ -249,7 +247,8 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         if not request or request.user.is_anonymous:
             return False
         recipe = data['recipe']
-        if ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+        if ShoppingCart.objects.filter(user=request.user,
+                                       recipe=recipe).exists():
             raise serializers.ValidationError({
                 'status': 'Этот рецепт уже в списке покупок.'
             })

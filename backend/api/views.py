@@ -1,5 +1,7 @@
 import io
+import os
 
+from django.db.models import Sum
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -11,19 +13,20 @@ from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from recipes.models import (Ingredient, Recipe, RecipeIngredient, Tag,
-                            Favorite, ShoppingCart)
+from backend.settings import BASE_DIR
 from users.models import Subscription, User
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 from .filters import RecipesFilters
 from .paginations import LimitPageNumberPagination
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (ShortRecipeSerializer, CreateRecipeSerializer,
-                          CustomUserSerializer, IngredientSerializer,
-                          RecipeSerializer, SubscriptionSerializer,
-                          TagSerializer, FavoriteSerializer,
-                          ShoppingCartSerializer)
+from .serializers import (CreateRecipeSerializer, CustomUserSerializer,
+                          FavoriteSerializer, IngredientSerializer,
+                          RecipeSerializer, ShoppingCartSerializer,
+                          SubscriptionSerializer, TagSerializer)
 
-pdfmetrics.registerFont(TTFont('ArialUni', 'fonts/Arial Unicode MS.ttf'))
+
+FONT_PATH = os.path.join(BASE_DIR, 'static/fonts/Arial Unicode MS.ttf')
 
 
 class UsersViewSet(UserViewSet):
@@ -162,30 +165,24 @@ class RecipesViewSet(viewsets.ModelViewSet):
         if not ShoppingCart.objects.filter(user=user).exists():
             return HttpResponse("Ваш список покупок пуст")
         shopping_cart = ShoppingCart.objects.filter(user=user)
-        ingredient_out: dict = {}
-        for item in shopping_cart:
-            recipe = item.recipe
-            recipe_ingredients = RecipeIngredient.objects.filter(
-                recipe=recipe).values('ingredient__name',
-                                      'ingredient__measurement_unit',
-                                      'amount'
-                                      )
-            for ingredient in recipe_ingredients:
-                key = (ingredient['ingredient__name']+' ('
-                       + ingredient['ingredient__measurement_unit']+')'
-                       )
-                if ingredient['ingredient__name'] in ingredient_out:
-                    ingredient_out[key] += ingredient['amount']
-                else:
-                    ingredient_out[key] = ingredient['amount']
+        recipe_ingredients = RecipeIngredient.objects.filter(
+            recipe__in=[item.recipe for item in shopping_cart]
+            ).select_related('ingredient').values(
+                'ingredient__name',
+                'ingredient__measurement_unit',
+            ).annotate(total_amount=Sum('amount'))
+        pdfmetrics.registerFont(TTFont('ArialUni', FONT_PATH))
         buffer = io.BytesIO()
         pdf = canvas.Canvas(buffer)
         pdf.setFont('ArialUni', 20)
         pdf.drawString(200, 750, 'Список покупок')
         pdf.setFont('ArialUni', 16)
         y = 710
-        for i, (keys, value) in enumerate(ingredient_out.items()):
-            item_string = f'{i+1}. {keys} - {value}'
+        for i, item in enumerate(recipe_ingredients):
+            name_unit = (item.get('ingredient__name') + ' ('
+                         + item.get('ingredient__measurement_unit') + ')')
+            total_amount = item.get('total_amount')
+            item_string = f'{i+1}. {name_unit} - {total_amount}'
             pdf.drawString(100, y, item_string)
             y -= 20
         pdf.showPage()
