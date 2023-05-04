@@ -166,10 +166,10 @@ class RecipesViewSet(viewsets.ModelViewSet):
         shopping_cart = ShoppingCart.objects.filter(user=user)
         recipe_ingredients = RecipeIngredient.objects.filter(
             recipe__in=[item.recipe for item in shopping_cart]
-            ).select_related('ingredient').values_list(
-                'ingredient__name',
-                'ingredient__measurement_unit'
-            ).annotate(total_amount=Sum('amount'))
+        ).select_related('ingredient').values_list(
+            'ingredient__name',
+            'ingredient__measurement_unit'
+        ).annotate(total_amount=Sum('amount'))
         pdfmetrics.registerFont(TTFont('ArialUni', FONT_PATH))
         buffer = io.BytesIO()
         pdf = canvas.Canvas(buffer)
