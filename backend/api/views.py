@@ -25,8 +25,7 @@ from .serializers import (CreateRecipeSerializer, CustomUserSerializer,
                           RecipeSerializer, ShoppingCartSerializer,
                           SubscriptionSerializer, TagSerializer)
 
-
-FONT_PATH = os.path.join(BASE_DIR, 'static/fonts/Arial Unicode MS.ttf')
+FONT_PATH = os.path.join(BASE_DIR, 'static/fonts/Arial.TTF')
 
 
 class UsersViewSet(UserViewSet):
@@ -163,13 +162,13 @@ class RecipesViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         user = request.user
         if not ShoppingCart.objects.filter(user=user).exists():
-            return HttpResponse("Ваш список покупок пуст")
+            return HttpResponse('Ваш список покупок пуст')
         shopping_cart = ShoppingCart.objects.filter(user=user)
         recipe_ingredients = RecipeIngredient.objects.filter(
             recipe__in=[item.recipe for item in shopping_cart]
-            ).select_related('ingredient').values(
+            ).select_related('ingredient').values_list(
                 'ingredient__name',
-                'ingredient__measurement_unit',
+                'ingredient__measurement_unit'
             ).annotate(total_amount=Sum('amount'))
         pdfmetrics.registerFont(TTFont('ArialUni', FONT_PATH))
         buffer = io.BytesIO()
@@ -179,9 +178,8 @@ class RecipesViewSet(viewsets.ModelViewSet):
         pdf.setFont('ArialUni', 16)
         y = 710
         for i, item in enumerate(recipe_ingredients):
-            name_unit = (item.get('ingredient__name') + ' ('
-                         + item.get('ingredient__measurement_unit') + ')')
-            total_amount = item.get('total_amount')
+            name_unit = item[0] + ' (' + item[1] + ')'
+            total_amount = item[2]
             item_string = f'{i+1}. {name_unit} - {total_amount}'
             pdf.drawString(100, y, item_string)
             y -= 20

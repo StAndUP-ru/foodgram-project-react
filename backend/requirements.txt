@@ -1,5 +1,7 @@
 Django==2.2.19
+asgiref==3.2.10
 pytz==2023.3
+PyJWT==2.1.0
 sqlparse==0.4.3
 Pillow==8.3.1
 psycopg2-binary==2.8.6

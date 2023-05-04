@@ -1,4 +1,4 @@
-version: '3.3'
+version: '3.8'
 services:
 
   db:
@@ -9,42 +9,36 @@ services:
       - ./.env
 
   backend:
-    build:
-      context: ../
-      dockerfile: backend/Dockerfile
+    build: standup188/foodgram_backend:latest
     expose:
       - 8000
     restart: always
     volumes:
-      - static_value:/app/static/
-      - media_value:/app/media/
+      - static_value:/app/backend_static/
+      - media_value:/app/backend_media/
     depends_on:
       - db
     env_file:
       - ./.env
 
   nginx:
-    image: nginx:1.19.3
+    image: nginx:1.21.3-alpine
     ports:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
-      - static_value:/var/html/static/
-      - media_value:/var/html/media/
+      - static_value:/app/backend_static/
+      - media_value:/app/backend_media/
     restart: always
     depends_on:
-      - backend
+      - frontend
 
   frontend:
-    build:
-      context: ../
-      dockerfile: frontend/Dockerfile
+    build: standup188/foodgram_frontend:latest
     volumes:
       - ../frontend/:/app/result_build/
-    depends_on:
-      - nginx
 
 volumes:
   db_data:
