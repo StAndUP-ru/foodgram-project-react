@@ -1,6 +1,5 @@
-# Продуктовый помощник
+# Продуктовый помощник ![example workflow](https://github.com/StAndUP-ru/foodgram-project-react/actions/workflows/main.yml/badge.svg)
 
-![example workflow](https://github.com/StAndUP-ru/foodgram-project-react/actions/workflows/foodgram_workflow.yml/badge.svg)  
 
 ## Сайт
 Ссылка на сайт:
