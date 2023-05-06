@@ -1,5 +1,7 @@
 # Продуктовый помощник ![example workflow](https://github.com/StAndUP-ru/foodgram-project-react/actions/workflows/main.yml/badge.svg)
 
+## Описание проекта
+"Продуктовый помошник" - это сайт дял размещения своих рецептов
 
 ## Сайт
 Ссылка на сайт:
