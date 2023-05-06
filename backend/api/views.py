@@ -25,7 +25,7 @@ from .serializers import (CreateRecipeSerializer, CustomUserSerializer,
                           RecipeSerializer, ShoppingCartSerializer,
                           SubscriptionSerializer, TagSerializer)
 
-FONT_PATH = os.path.join(BASE_DIR, '/backend_static/fonts/Arial.TTF')
+FONT_PATH = os.path.join(BASE_DIR, '/app/backend_static/fonts/Arial.TTF')
 
 
 class UsersViewSet(UserViewSet):
