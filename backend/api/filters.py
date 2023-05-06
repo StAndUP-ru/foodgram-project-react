@@ -1,6 +1,11 @@
 from django_filters.rest_framework import filters, FilterSet
+from rest_framework.filters import SearchFilter
 
 from recipes.models import Recipe, Tag
+
+
+class IngredientFilter(SearchFilter):
+    search_param = 'name'
 
 
 class RecipesFilters(FilterSet):
