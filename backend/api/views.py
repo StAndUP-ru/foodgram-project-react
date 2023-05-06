@@ -18,7 +18,7 @@ from users.models import Subscription, User
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from .filters import RecipesFilters, IngredientFilter
-from .paginations import LimitPageNumberPagination
+from .paginations import LimitPageNumberPagination, CustomPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (CreateRecipeSerializer, CustomUserSerializer,
                           FavoriteSerializer, IngredientSerializer,
@@ -86,7 +86,7 @@ class UsersViewSet(UserViewSet):
 
 class RecipesViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    pagination_class = LimitPageNumberPagination
+    pagination_class = CustomPagination
     permission_classes = (IsAuthorOrReadOnly,)
     filter_backends = [DjangoFilterBackend]
     filterset_class = RecipesFilters

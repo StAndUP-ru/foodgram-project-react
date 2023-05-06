@@ -9,3 +9,7 @@ class LimitPageNumberPagination(LimitOffsetPagination, PageNumberPagination):
 
     page_query_param = 'page'
     page_size = 6
+
+
+class CustomPagination(PageNumberPagination):
+    page_size_query_param = 'limit'
