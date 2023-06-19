@@ -31,7 +31,7 @@
 ```bash
 git clone https://github.com/StAndUP-ru/foodgram-project-react.git
 ```
-* Перейти в диреуторию проекта:
+* Перейти в директорию проекта:
 ```bash
 cd foodgram-project-react
 ```
